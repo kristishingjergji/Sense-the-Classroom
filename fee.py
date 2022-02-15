@@ -1,15 +1,13 @@
 # Packages
 import cv2
-import os
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
 import numpy as np
 import dlib
 import joblib
 from scipy.spatial import ConvexHull
-
 from skimage.feature import hog
-from matplotlib.offsetbox import (TextArea , AnnotationBbox)
+from matplotlib.offsetbox import (TextArea ,AnnotationBbox)
 from skimage.morphology.convex_hull import grid_points_in_poly
 
 

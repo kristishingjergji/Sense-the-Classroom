@@ -1,9 +1,10 @@
 # Packages
+
+import dlib
 import cv2
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
 import numpy as np
-import dlib
 import joblib
 from scipy.spatial import ConvexHull
 from skimage.feature import hog

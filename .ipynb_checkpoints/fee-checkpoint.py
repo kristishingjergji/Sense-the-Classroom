@@ -21,21 +21,19 @@ def faceLandmarks(image, predictor):
     """
     Detects the face and landmarks in an image
 
-    Args: image, [numpy.ndarray]
-          predictor, this object is a tool that takes in an image region containing
-                     some object and outputs a set of point locations that define
-                     the pose of the object the [_dlib_pybind11.shape_predictor]
+    Args: image, the directory of the targeted file
+          predictor, if True it will print the column headers
 
-    Returns: landmarks, an array containing the landmarks (68,2) [numpy.ndarray]
-             rects, the coordinates (upperLeftX, upperLeftY, bottomleftX, bottomleftY)
-                    of the face [list]
+    Returns: the column headers in a list
     """
 
 
-
+    """
+    Returns the coordinates of the 68 landmarks and the rectangle (upperLeftX, upperLeftY, bottomleftX, bottomleftY)
+    of the detected  """
     detector = dlib.get_frontal_face_detector()
     detect = detector(image,1)
-    shape = predictor(image,detect[0]) #the landmarks in another form
+    shape= predictor(image,detect[0]) #the landmarks in another form
     landmarks = shape_to_np(shape)
     rects = detector(image, 1)
     for k, d in enumerate(rects):
@@ -49,16 +47,8 @@ def faceLandmarks(image, predictor):
 
 def alignFromLandmarks(image, predictor):
     """
-    Aligns the image given from the landmarks
-
-    Args: image, [numpy.ndarray]
-          predictor, this object is a tool that takes in an image region containing
-                     some object and outputs a set of point locations that define
-                     the pose of the object the [_dlib_pybind11.shape_predictor]
-
-    Returns : rotated, the rotated image [numpy.ndarray]
-              rotated_landmarks, an array containing the landmarks (68,2) [numpy.ndarray]
-    """
+    Returns aligned image and the angle of alignement given the landmarks
+    It requires boundingBoxNaive function """
 
     detector = dlib.get_frontal_face_detector()
     detect = detector(image,1)

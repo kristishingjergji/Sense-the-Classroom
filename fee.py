@@ -59,11 +59,8 @@ def alignFromLandmarks(image, predictor):
     Returns : rotated, the rotated image [numpy.ndarray]
               rotated_landmarks, an array containing the landmarks (68,2) [numpy.ndarray]
     """
+    points, _ = faceLandmarks(image, predictor)
 
-    detector = dlib.get_frontal_face_detector()
-    detect = detector(image,1)
-    shape= predictor(image,detect[0]) #the landmarks in another form
-    points = shape_to_np(shape)
 
     left = [36, 37, 38, 39, 40, 41] # keypoint indices for left eye
     right = [42, 43, 44, 45, 46, 47] # keypoint indices for right eye
@@ -105,12 +102,16 @@ def alignFromLandmarks(image, predictor):
     # Calculating a center point of the image
     # Integer division "//"" ensures that we receive whole numbers
     center = (w // 2, h // 2)
-    # Defining a matrix M and calling cv2.getRotationMatrix2D method
+
+    # Defining the rotation matrix M
     M = cv2.getRotationMatrix2D(center, (angle), 1.0)
     # Applying the rotation to our image using the cv2.warpAffine method
     rotated = cv2.warpAffine(image, M, (w, h))
 
     ones = np.ones((68,1), dtype=int)
+
+    # Making the landmarks array 3D by adding one column in order to be able to perform
+    # the matrix multiplication
     points3D = np.concatenate((points, ones), axis=1)
     rotated_landmarks = np.asarray([np.dot(M, landmark.T) for landmark in points3D])
 
@@ -120,35 +121,40 @@ def alignFromLandmarks(image, predictor):
 
 def cropResize(image, size, predictor):
     """
-    Returns the cropped and resized (size) image and landmarks """
-    detector = dlib.get_frontal_face_detector()
-    detect = detector(image,1)
-    shape= predictor(image,detect[0]) #the landmarks in another form
-    shape = shape_to_np(shape)
-    rects = detector(image, 1) # the coordinates of the rectangles of the face
+    Crops the dected face of the  
 
-    # Get the bounding box in the face and plot it
-    for k, d in enumerate(rects):
-        x = d.left()
-        y = d.top()
-        w = d.right()
-        h = d.bottom()
-        #print(x,y,w,h)
+    Args: image, [numpy.ndarray]
+          size, the targeted size of the resizing [int] 
+          predictor, this object is a tool that takes in an image region containing
+                     some object and outputs a set of point locations that define
+                     the pose of the object the [_dlib_pybind11.shape_predictor]
 
+    Returns : resized_cropped_image, the rotated and cropped image [numpy.ndarray]
+              shape_cropped_resized, an array containing the landmarks (68,2) on the new 
+                                     rotated and cropped image [numpy.ndarray]
+    """
+
+    shape, rects = faceLandmarks(image, predictor)
+
+    # Get the bounding box of the face
+ 
+    x, y, w, h  = rects[0], rects[1], rects[2], rects[3]
+
+
+    # Open the bounding box in order to include all the landmarks of the face
     for ix in range(60,0,-1):
-        #print(ix)
         if x-ix > 0:
             break
+            
     for iy in range(60,0,-1):
-        #print(iy)
         if y-iy > 0:
             break
+            
     for iw in range(60,0,-1):
-        #print(iw)
         if w+iw < image.shape[1]:
             break
+            
     for ih in range(60,0,-1):
-        #print(ih)
         if h-ih < image.shape[1]:
             break
 
@@ -166,8 +172,16 @@ def cropResize(image, size, predictor):
 
 
 def hogsLandmarks(resizedCroppedImage, resizedCroppedLandmarks, folder):
+    
     """
-    Returns features of the image given the pretrained classifier using the hog values and the landmarks """
+    Computes features of the image given the pretrained classifier using the hog values and the landmarks 
+
+    Args: resizedCroppedImage, [numpy.ndarray]
+          resizedCroppedLandmarks, an array containing the landmarks (68,2) [numpy.ndarray] 
+          folder, the directory where the pretrained files are located [string]
+
+    Returns : feature_cbd, features of the image (1, 1331) that can be used for classification of the AUs [numpy.ndarray]
+    """
     _, pca_model, classifier, scaler = openFiles(folder)
     resizedCroppedLandmarks = np.array(resizedCroppedLandmarks)
 
@@ -185,8 +199,15 @@ def hogsLandmarks(resizedCroppedImage, resizedCroppedLandmarks, folder):
 
 
 def AUdetection(feature_cbd, folder):
+    
     """
-    Returns a list of the predicted AUs """
+    Computes the AUs 
+
+    Args: feature_cbd, the facial feature (1, 1331) used for the AU classification [numpy.ndarray]
+          folder, the directory where the pretrained files are located [string]
+
+    Returns : au_present, the AUs that are classified as present [list]
+    """
     _, _, classifier, _ = openFiles(folder)
     combined_pred_aus = []
     for keys in classifier:
@@ -205,7 +226,16 @@ def AUdetection(feature_cbd, folder):
 
 def plotAUs(image, AUs, landmarks,rects):
     """
-    Returns a plot of the AUs on the face (red for absent and green for present) """
+    Plots the AUs on the initial image 
+
+    Args: image, [numpy.ndarray]
+          AUs, the the AUs present in the face [list]
+          landmarks, an array containing the landmarks (68,2) [numpy.ndarray] 
+          rects, the coordinates (upperLeftX, upperLeftY, bottomleftX, bottomleftY)
+                 of the face [list]
+
+    Returns : nothing to return, the call of the function will diplay the plot 
+    """
 
     distancex = image.shape[0] * (100/1024)
     distancey = image.shape[1] * (80/1024)
@@ -465,7 +495,17 @@ def plotAUs(image, AUs, landmarks,rects):
 
 def openFiles(folder):
     """
-    Opens the files with the pretrained model given the folder
+    Function that helps to open the files of the pretained models.
+
+    Args: folder, the directory where the pretrained files are located [string]
+
+    Returns : predictor, this object is a tool that takes in an image region containing
+                         some object and outputs a set of point locations that define
+                         the pose of the object the [_dlib_pybind11.shape_predictor]
+              pca_model, the pca pretrained model [sklearn.decomposition._pca.PCA]
+              classifier, a dictionary including a sklearn.svm._classes.LinearSVC for each AU. [dict]
+              scaler, the scaler [sklearn.preprocessing._data.StandardScaler]
+
     """
 
     predictor = dlib.shape_predictor(folder + "/shape_predictor_68_face_landmarks.dat")
@@ -477,7 +517,11 @@ def openFiles(folder):
 
 def shape_to_np(shape, dtype="int"):
     """
-    Returns the output of the dlib in an array-format
+    Transforms the output of the dlib in an array-type 
+    
+    Args: shape, the output of the dlib landmarks detection [_dlib_pybind11.full_object_detection]
+    
+    Returns: coords, the landmakrs in an array-type (68,2) [numpy.ndarray]
     """
 
     coords = np.zeros((68, 2), dtype=dtype)
@@ -488,7 +532,11 @@ def shape_to_np(shape, dtype="int"):
 
 def boundingBoxNaive(points):
     """
-    Returns the coordinates (upperLeftX, upperLeftY), (bottomRightX, bottYmRightX)]
+    Creates a bounding box that contains a list of coordinates
+    
+    Args: points, the landmakrs in an array-type (68,2) [numpy.ndarray]
+    
+    Returns: the coordinates of the bounding in the form :  [(upperLeftX, upperLeftY), (bottomRightX, bottYmRightX)], [list]
     """
     upperLeftX = min(point[0] for point in points)
     upperLeftY = min(point[1] for point in points)
@@ -500,7 +548,18 @@ def boundingBoxNaive(points):
 
 def getNewCoords(point_x,point_y,upperLeftX, upperLeftY, lowerrightX, lowerRightY, image_width,image_height):
     """
-    Returns the new coordinates of a point (point_x, point_y), in a cropped bounding box (upperLeftX, upperLeftY, lowerrightX, lowerRightY) and rescaled (image_width,image_height) image
+    Computes the new coordinates of a point in an image cropped based on a bounding box and rescaled.
+    
+    Args: point_x, the x-coordinate of the initial point [int]
+          point_y, the y-coordinate of the initial point [int]
+          upperLeftX, the x-coordinate of the upper left point of the bounding box [int]
+          upperLeftY, the y-coordinate of the upper left point of the bounding box [int]
+          lowerrightX, the x-coordinate of the lower tight point of the bounding box [int]
+          lowerRightY, the y-coordinate of the lower tight point of the bounding box [int]
+          image_width, the width of the resized image [int]
+          image_height, the height of the resized image [int]
+          
+    Return:  (point_x,point_y), the coordinates of the new point [tuple] 
     """
 
     sizeX = lowerrightX - upperLeftX
@@ -515,14 +574,22 @@ def getNewCoords(point_x,point_y,upperLeftX, upperLeftY, lowerrightX, lowerRight
     point_y = point_y * image_height/sizeY - offsetY
     return (point_x,point_y)
 
-# not used now
+# not used in this version
 def rotate(img, angle, landmarks):
     """
-    Returns rotated image and rotated landmarks given the angle of rotation
+    Get the rotated image and the the set of landmarks given the angle of rotation
+    
+    Args: img,
+          angle,
+          landmarks
+    
+    Returns: the coordinates of the bounding in the form :  [(upperLeftX, upperLeftY), (bottomRightX, bottYmRightX)], [list]
     """
-    width, height = img.shape[:2]
-    rotation = cv2.getRotationMatrix2D((width/2, height/2), angle, 1)
-    rotated_img = cv2.warpAffine(img, rotation, (width, height))
 
-    rotated_landmarks = np.asarray([np.dot(rotation, landmark.T) for landmark in landmarks])
+    width, height = image.shape[:2]
+    rotation = cv2.getRotationMatrix2D((width/2, height/2), angle, 1)
+    rotated_img = cv2.warpAffine(image, rotation, (width, height))
+    ones = np.ones((68,1), dtype=int)
+    points3D = np.concatenate((landmarks, ones), axis=1)
+    rotated_landmarks = np.asarray([np.dot(rotation, landmark.T) for landmark in points3D])
     return rotated_img, rotated_landmarks

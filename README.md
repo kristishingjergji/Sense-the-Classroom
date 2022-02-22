@@ -6,7 +6,8 @@ This project focuses on developing methods and means to ethically collect and us
 
 ## 1. FEE
 FEE is a tool that provides interpretation of the facial expressions utilising visualisation. <br />
-### Libraries required:
+### Libraries required: <br />
+<sub>see requirements.txt </sup>
 * **`dlib`**
 For the detection of the face and the landmarks.
 * **`cv2`**

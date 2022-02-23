@@ -128,7 +128,7 @@ def align_from_landmarks(image, **kwargs):
 
 def crop_resize(image, size, **kwargs):
     """
-    Crops the dected face of the  
+    Crops the dected face of the image  
 
     Args: image, [numpy.ndarray]
           size, the targeted size of the resizing [int] 

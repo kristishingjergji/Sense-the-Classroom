@@ -17,14 +17,14 @@ from skimage.morphology.convex_hull import grid_points_in_poly
 ######### Functions to call
 
 
-def faceLandmarks(image, predictor):
+def face_landmarks(image, predictor):
     """
     Detects the face and landmarks in an image
 
-    Args: image, [numpy.ndarray]
+    Args: image, [numpy.ndarray] 
           predictor, this object is a tool that takes in an image region containing
                      some object and outputs a set of point locations that define
-                     the pose of the object the [_dlib_pybind11.shape_predictor]
+                     the pose of the object [_dlib_pybind11.shape_predictor]
 
     Returns: landmarks, an array containing the landmarks (68,2) [numpy.ndarray]
              rects, the coordinates (upperLeftX, upperLeftY, bottomleftX, bottomleftY)
@@ -47,29 +47,35 @@ def faceLandmarks(image, predictor):
     return landmarks, rects
 
 
-def alignFromLandmarks(image, predictor):
+def align_from_landmarks(image, **kwargs):
     """
     Aligns the image given from the landmarks
 
-    Args: image, [numpy.ndarray]
-          predictor, this object is a tool that takes in an image region containing
-                     some object and outputs a set of point locations that define
-                     the pose of the object the [_dlib_pybind11.shape_predictor]
+    Args: image (numpy.ndarray) 
+          **predictor (_dlib_pybind11.shape_predictor): this object is a tool that takes in an image 
+                    region containing some object and outputs a set of point locations that define
+                     the pose of the object
+          **landmarks, an array containing the landmarks (68,2) [numpy.ndarray]
 
     Returns : rotated, the rotated image [numpy.ndarray]
-              rotated_landmarks, an array containing the landmarks (68,2) [numpy.ndarray]
+              rotated_landmarks, an array containing the landmarks (68,2) 
     """
-    points, _ = faceLandmarks(image, predictor)
-
-
+    
+    predictor = kwargs.get('predictor', None)
+    landmarks = kwargs.get('landmarks', None)
+    if predictor is not None:
+        points, _ = face_landmarks(image, predictor)
+    elif landmarks is not None:
+        points = landmarks
+    
     
     left = [36, 37, 38, 39, 40, 41] # keypoint indices for left eye
     right = [42, 43, 44, 45, 46, 47] # keypoint indices for right eye
     points_left = [points[i] for i in left]
     points_right = [points[i] for i in right]
 
-    eye_left = boundingBoxNaive(points_left)
-    eye_right = boundingBoxNaive(points_right)
+    eye_left = bounding_box_naive(points_left)
+    eye_right = bounding_box_naive(points_right)
 
     # Get the eyes coordinates
     ex1 = eye_left[0][0]
@@ -120,53 +126,58 @@ def alignFromLandmarks(image, predictor):
     return rotated, rotated_landmarks
 
 
-def cropResize(image, size, predictor):
+def crop_resize(image, size, **kwargs):
     """
     Crops the dected face of the  
 
     Args: image, [numpy.ndarray]
           size, the targeted size of the resizing [int] 
-          predictor, this object is a tool that takes in an image region containing
-                     some object and outputs a set of point locations that define
-                     the pose of the object the [_dlib_pybind11.shape_predictor]
+          **predictor (_dlib_pybind11.shape_predictor): this object is a tool that takes in an image 
+                    region containing some object and outputs a set of point locations that define
+                     the pose of the object
+          **landmarks, an array containing the landmarks (68,2) [numpy.ndarray]
 
     Returns : resized_cropped_image, the rotated and cropped image [numpy.ndarray]
               shape_cropped_resized, an array containing the landmarks (68,2) on the new 
                                      rotated and cropped image [numpy.ndarray]
     """
-
-    shape, rects = faceLandmarks(image, predictor)
-
-    # Get the bounding box of the face
- 
-    x, y, w, h  = rects[0], rects[1], rects[2], rects[3]
-
-
-    # Open the bounding box in order to include all the landmarks of the face
-    for ix in range(60,0,-1):
-        if x-ix > 0:
-            break
+    predictor = kwargs.get('predictor', None)
+    landmarks = kwargs.get('landmarks', None)
+    if predictor is not None:
+        shape, rects = face_landmarks(image, predictor)
+        x, y, w, h  = rects[0], rects[1], rects[2], rects[3]
+        # Open the bounding box in order to include all the landmarks of the face
+        for ix in range(60,0,-1):
+            if x-ix > 0:
+                break
             
-    for iy in range(60,0,-1):
-        if y-iy > 0:
-            break
+        for iy in range(60,0,-1):
+            if y-iy > 0:
+                break
             
-    for iw in range(60,0,-1):
-        if w+iw < image.shape[1]:
-            break
+        for iw in range(60,0,-1):
+            if w+iw < image.shape[1]:
+                break
             
-    for ih in range(60,0,-1):
-        if h-ih < image.shape[1]:
-            break
+        for ih in range(60,0,-1):
+            if h-ih < image.shape[1]:
+                break
 
-    cropped_image = image[ y:h, x:w]
+        cropped_image = image[ y-iy:h-ih, x-ix:w+iw]
+        
+    elif landmarks is not None:
+        shape = landmarks
+        rects = bounding_box_naive(shape)
+        x, y, w, h  = rects[0][0], rects[0][1], rects[1][0], rects[1][1]
+        cropped_image = image[ y:h, x:w]
+
     resized_cropped_image = cv2.resize(cropped_image, (size,size), interpolation = cv2.INTER_AREA)
 
     shape_cropped_resized = []
     for landmark in range(len(shape)):
         x_old = shape[landmark][0]
         y_old = shape[landmark][1]
-        (x_new, y_new) = getNewCoords(x_old, y_old, x, y, w, h, size, size )
+        (x_new, y_new) = get_new_coords(x_old, y_old, x, y, w, h, size, size )
         shape_cropped_resized.append((x_new, y_new))
     return resized_cropped_image, shape_cropped_resized
 
@@ -530,7 +541,7 @@ def shape_to_np(shape, dtype="int"):
     return coords
 
 
-def boundingBoxNaive(points):
+def bounding_box_naive(points):
     """
     Creates a bounding box that contains a list of coordinates
     
@@ -538,15 +549,15 @@ def boundingBoxNaive(points):
     
     Returns: the coordinates of the bounding in the form :  [(upperLeftX, upperLeftY), (bottomRightX, bottYmRightX)], [list]
     """
-    upperLeftX = min(point[0] for point in points)
-    upperLeftY = min(point[1] for point in points)
-    bottomRightX = max(point[0] for point in points)
-    bottYmRightX = max(point[1] for point in points)
+    upperLeftX = int(min(point[0] for point in points))
+    upperLeftY = int(min(point[1] for point in points))
+    bottomRightX = int(max(point[0] for point in points))
+    bottYmRightX = int(max(point[1] for point in points))
 
     return [(upperLeftX, upperLeftY), (bottomRightX, bottYmRightX)]
 
 
-def getNewCoords(point_x,point_y,upperLeftX, upperLeftY, lowerrightX, lowerRightY, image_width,image_height):
+def get_new_coords(point_x,point_y,upperLeftX, upperLeftY, lowerrightX, lowerRightY, image_width,image_height):
     """
     Computes the new coordinates of a point in an image cropped based on a bounding box and rescaled.
     

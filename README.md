@@ -23,6 +23,9 @@ For the ConvexHull method and the image processing respectively
 1. [Landmarks from `dlib`](http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2)
 2. Pretrained models from `py-feat`:  [pca](https://github.com/cosanlab/py-feat/releases/download/v0.1/hog_pca_all_emotio.joblib), [svm](https://github.com/cosanlab/py-feat/releases/download/v0.1/svm_568.joblib) and [hogs](https://github.com/cosanlab/py-feat/releases/download/v0.1/hog_scalar_aus.joblib)
 
+### How to use 
 
+
+## 2. CNN
 2. CNN 
 to do : add documentatio in cnn.py and CKpreprocess.py 

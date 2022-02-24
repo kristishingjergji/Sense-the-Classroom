@@ -24,4 +24,5 @@ For the ConvexHull method and the image processing respectively
 2. Pretrained models from `py-feat`:  [pca](https://github.com/cosanlab/py-feat/releases/download/v0.1/hog_pca_all_emotio.joblib), [svm](https://github.com/cosanlab/py-feat/releases/download/v0.1/svm_568.joblib) and [hogs](https://github.com/cosanlab/py-feat/releases/download/v0.1/hog_scalar_aus.joblib)
 
 
-
+2. CNN 
+to do : add documentatio in cnn.py and CKpreprocess.py 
